@@ -36,14 +36,13 @@ class Player {
         //currentTrack.subscribe(this.updateControls.bind(this));
         //isPlaying.subscribe(this.updateControls.bind(this));
         setInterval(async () => {
-            if (!this.audioFile.paused)
+            if (!this.audioFile.paused) {
                 currentTime.set(this.audioFile.currentTime);
-        }, 100);
-        setInterval(() => {
+            }
             if (get(isPlaying)) {
                 this.updateControls();
             }
-        }, 10000);
+        }, 500);
         listen("pause", _ => this.pause());
         listen("play", _ => this.resume());
     }

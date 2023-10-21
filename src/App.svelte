@@ -28,7 +28,6 @@
     <div class="row" style="flex: 1; min-height: 0; overflow: hidden;">
         <Sidebar />
         <AlbumView />
-        <AlbumDetails />
     </div>
     <ControlBar />
 </main>

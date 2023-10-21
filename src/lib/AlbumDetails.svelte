@@ -1,9 +1,12 @@
 <script lang="ts">
     import { convertFileSrc, invoke } from "@tauri-apps/api/tauri";
+    import { open } from "@tauri-apps/api/dialog";
     import player from "../player";
     import { type Track } from "../bindings/Track";
     import { selectedAlbum, currentTrack, isPlaying, isLoading } from "../store";
     import Icon from "./Icon.svelte";
+    import Menu from "./Menu.svelte";
+    import MenuOption from "./MenuOption.svelte";
 
     let tracks: Track[] = [];
     $: {
@@ -16,6 +19,10 @@
                 );
         }
     }
+
+    let showMenu = false;
+    let pos = { x: 0, y: 0 };
+    let selected = 0;
 
     const formatTime = (seconds: number) => {
         const h = Math.floor(seconds / 3600);
@@ -46,6 +53,32 @@
             await player.playNext();
         }
     }
+
+    const rightClick = async (e, index: number) => {
+        if (showMenu) {
+            showMenu = false;
+            await new Promise(res => setTimeout(res, 100));
+        }
+
+        selected = index;
+        pos = { x: e.clientX, y: e.clientY };
+        showMenu = true;
+    }
+
+    const extractStems = async () => {
+        const outDir = await open({
+            directory: true,
+            multiple: false
+        });
+        if (outDir == null) {
+            return;
+        }
+
+        invoke("run_demucs", {
+            track: tracks[selected],
+            outDir
+        })
+    }
 </script>
 
 {#if $selectedAlbum}
@@ -55,7 +88,7 @@
         <div id="contents">
             <div id="tracks">
                 {#each tracks as track, id}
-                    <button on:click={() => clickTrack(id)}>
+                    <button on:click={() => clickTrack(id)} on:contextmenu|preventDefault={e => rightClick(e, id)}>
                         <div hidden={$currentTrack?.id == track.id && $isPlaying}>
                             <Icon name="play" size="16" />
                         </div>
@@ -63,14 +96,19 @@
                             <Icon name="pause" size="16" />
                         </div>
                         <span>{track.metadata.track_number}:</span>
-                        <span>{track.metadata.title}</span>
-                        <span class="spacer" />
-                        {formatTime(track.duration)}
+                        <span class="title">{track.metadata.title}</span>
+                        <span>{formatTime(track.duration)}</span>
                     </button>
                 {/each}
             </div>
         </div>
     </div>
+    {#if showMenu}
+        <Menu {...pos} on:click={() => showMenu = false} on:clickoutside={() => showMenu = false}>
+            <MenuOption text="Show metadata" icon="search" />
+            <MenuOption text="Extract stems" icon="music" on:click={extractStems} />
+        </Menu>
+    {/if}
 {/if}
 
 <style lang="scss">
@@ -111,6 +149,13 @@
     #tracks {
         display: flex;
         flex-direction: column;
+    }
+
+    .title {
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        flex: 1;
+        overflow: hidden;
     }
 
     button {

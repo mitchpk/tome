@@ -40,7 +40,7 @@ class Player {
                 currentTime.set(this.audioFile.currentTime);
             }
             if (get(isPlaying)) {
-                this.updateControls();
+                await this.updateControls();
             }
         }, 500);
         listen("pause", _ => this.pause());
@@ -50,11 +50,11 @@ class Player {
     async updateControls() {
         let track = get(currentTrack);
         let playing = get(isPlaying);
-        invoke("update_controls", {
-            track,
+        let info = {
             playing,
-            progress: currentTrack ? this.audioFile.currentTime : null
-        });
+            progress: track ? this.audioFile.currentTime : null
+        };
+        await invoke("set_playback", info);
     }
 
     getCurrentAudioFile() {
@@ -76,6 +76,7 @@ class Player {
     }
 
     async playTrack(track: Track) {
+        await invoke("set_metadata", { track });
         isLoading.set(true);
         isPlaying.set(true);
         currentTime.set(0);
@@ -84,10 +85,11 @@ class Player {
         this.audioFile.pause();
         let file = await readBinaryFile(track.path);
         this.audioFile.src = URL.createObjectURL(new Blob([file]));
+        //this.audioFile.src = convertFileSrc(track.path);
         await this.audioFile.play();
         this.audioFile.volume = perceivedLoudness(get(volume));
         isLoading.set(false);
-        this.updateControls();
+        await this.updateControls();
     }
 
     queueTrack(track: Track) {
@@ -99,14 +101,14 @@ class Player {
         this.audioFile.volume = perceivedLoudness(get(volume));
         await this.audioFile.play();
         isPlaying.set(true);
-        this.updateControls();
+        await this.updateControls();
     }
 
     async pause() {
         if (get(isLoading)) return;
         this.audioFile.pause();
         isPlaying.set(false);
-        this.updateControls();
+        await this.updateControls();
     }
 }
 

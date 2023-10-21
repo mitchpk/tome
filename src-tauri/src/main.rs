@@ -3,10 +3,11 @@
     windows_subsystem = "windows"
 )]
 
-use std::fs;
 use std::path::PathBuf;
+use std::{fs, process::Command};
 
 use dotenvy::dotenv;
+use models::Track;
 use serde::{Serialize, Serializer};
 
 mod controls;
@@ -67,6 +68,19 @@ fn create_cache_dir() -> Result<PathBuf> {
     Ok(cache_path)
 }
 
+#[tauri::command]
+async fn run_demucs(track: Track, out_dir: &str) -> Result<()> {
+    let mut child = Command::new("demucs/demucs")
+        .args([
+            "-o",
+            out_dir,
+            &track.path.to_string_lossy(),
+        ])
+        .spawn()?;
+    child.wait()?;
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
@@ -88,12 +102,14 @@ async fn main() -> Result<()> {
             _ => {}
         })
         .invoke_handler(tauri::generate_handler![
-            controls::update_controls,
+            controls::set_playback,
+            controls::set_metadata,
             library::update_library,
             library::get_artists,
             library::get_albums,
             library::get_playlists,
             library::get_tracks,
+            run_demucs,
         ])
         .manage(store)
         .run(tauri::generate_context!())?;

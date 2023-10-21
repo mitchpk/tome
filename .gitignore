@@ -19,3 +19,6 @@ dist-ssr
 *.sln
 *.sw?
 *.db*
+
+src-tauri/demucs/
+venv/
